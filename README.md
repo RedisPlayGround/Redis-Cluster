@@ -122,3 +122,33 @@
 - replica가 다른 master로 migrate해서 가용성을 높인다
 
 <img width="954" alt="image" src="https://user-images.githubusercontent.com/40031858/224213065-7a4d1e2d-3663-444a-b6f8-cc6b20af5a6e.png">
+
+---
+
+## 클러스터의 제약 사항
+
+### 클러스터에서는 DB0만 사용 가능
+
+- Redis는 한 인스턴스에 여러 데이터베이스를 가질 수 있으며 디폴트는 16
+  - 설정) databases 16
+- Multi DB는 용도별로 분리해서 관리를 용이하게 하기 위한 목적
+- 클러스터에서는 해당 기능을 사용할 수 없고 DB0으로 고정된다
+
+### Multi key operation 사용의 제약
+
+- key들이 각각 다른 노드에 저장되므로 MSET과 같ㅇ느 multi-key operation은 기본적으로 사용할 수 없다
+- 같은 노드 안에 속한 key들에 대해서는 multi-key operation이 가능
+- hash tags 기능을 사용하면 여러 key들을 같은 hash slot에 속하게 할 수 있음
+  - key 값 중 {} 안에 들어간 문자열에 대해서만 해싱을 수행하는 원리
+
+```markdown
+MSET {user:a}:age 20 {user:a} city seoul
+```
+
+### 클라이언트 구현의 강제
+
+- 클라이언트는 클러스터의 모든 노드에 접속해야 함
+- 클라이언트는 redirect 기능을 구현해야함(MOVED 에러의 대응)
+- 클라이언트 구현이 잘 된 라이브러리가 없는 환경도 있을 수 있음
+
+

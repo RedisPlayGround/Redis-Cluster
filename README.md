@@ -87,3 +87,38 @@
 <img width="1048" alt="image" src="https://user-images.githubusercontent.com/40031858/224211078-b1606634-ec6c-42a3-994d-461a2d5b2e86.png">
 
 
+---
+
+## 성능과 가용성
+
+### 클러스터를 사용할 때의 성능
+
+- 클라이언트가 MOVED 에러에 대해 재 요청을 해야하는 문제
+  - 클라이언트(라이브러리)는 key-node 맵을 캐싱하므로 대부분의 경우 발생하지 않음
+- 클라이언트는 단일 인스턴스의 Redis를 이용할 때와 같은 성능으로 이용 가능
+- 분산 시스템에서 성능은 데이터 일관성(consistency)과 trade-off가 있음
+  - Redis Cluster는 고성능의 확장성을 제공하면서 적절한 수준의 데이터 안정성과 가용성을 유지하는 것을 목표로 설계됨
+
+### 클러스터의 데이터 일관성
+
+- Redis Cluster는 strong consistency를 제공하지 않음
+- 높은 성능을 위해 비동기 복제를 하기 때문
+
+<img width="1046" alt="image" src="https://user-images.githubusercontent.com/40031858/224212127-a594f97e-4912-41fd-8a4b-e27ae961f323.png">
+
+
+### 클러스터의 가용성 - auto failover
+
+- 일부 노드(master)가 실패(또는 네트워크 단절) 하더라도 과반수 이상의 master가 남아있고 사라진 master의 replica들이 있다면 클러스터는 failover되어 가용한 상태가 된다
+- node timeout동안 과반수의 master와 통신하지 못한 master는 스스로 error state로 빠지고 write 요청을 받지 않음
+
+
+  예) master1과 replica2가 죽더라도, 2/3의 master가 남아있고, master1이 커버하던 hash slot은 replica1이 master로 승격되어 커버할 수 있다
+
+<img width="434" alt="image" src="https://user-images.githubusercontent.com/40031858/224212999-f1da0b73-c83a-41e2-86d6-6fa8bb567594.png">
+
+### 클러스터의 가용성 - replica migration
+
+- replica가 다른 master로 migrate해서 가용성을 높인다
+
+<img width="954" alt="image" src="https://user-images.githubusercontent.com/40031858/224213065-7a4d1e2d-3663-444a-b6f8-cc6b20af5a6e.png">

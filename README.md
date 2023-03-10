@@ -58,3 +58,32 @@
 - 클러스터에서는 multi key 오퍼레이션이 제한됨
 - Sentinel은 비교적 단순하고 소규모의 시스템에서 HA(고가용성)가 필요할 때 채택
 
+----
+
+## 데이터 분산과 Key 관리
+
+
+### 데이터를 분산하는 기준 
+
+- 특정 key의 데이터가 어느 노드(shard)에 속할 것인지 결정하는 메커니즘이 있어야 함
+- 보통 분산 시스템에서 해싱이 사용됨
+- 단순 해싱으로는 노드의 개수가 변할 때 모든 매핑이 새로 계산되어야 하는 문제가 있음
+
+<img width="986" alt="image" src="https://user-images.githubusercontent.com/40031858/224210414-90ef3d55-bf62-4bc0-a6a9-1c38149dec10.png">
+
+### Hash Slot을 이용한 데이터 분산
+
+- Redis는 16384개의 hash slot으로 key 공간을 나누어 관리
+- 각 키는 CRC16 해싱 후 16384로 modulo 연산을 해 각 hash slot에 매핑
+- hash slot은 각 노드들에게 나누어 분배됨
+
+<img width="932" alt="image" src="https://user-images.githubusercontent.com/40031858/224210914-be1998d0-30fc-4ffa-9a03-3962169d9acf.png">
+
+### 클라이언트의 데이터 접근
+
+- 클러스터 노드는 요청이 온 key에 해당하는 노드로 자동 redirect를 해주지 않음
+- 클라이언트는 MOVED 에러를 받으면 해당 노드로 다시 요청해야함
+
+<img width="1048" alt="image" src="https://user-images.githubusercontent.com/40031858/224211078-b1606634-ec6c-42a3-994d-461a2d5b2e86.png">
+
+

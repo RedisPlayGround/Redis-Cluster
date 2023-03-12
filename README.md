@@ -152,3 +152,68 @@ MSET {user:a}:age 20 {user:a} city seoul
 - 클라이언트 구현이 잘 된 라이브러리가 없는 환경도 있을 수 있음
 
 
+
+---
+
+# 클러스터 구성 실습
+
+## 클러스터 설정 파일 이해하기
+
+- cluster-enabled < yes/no> : 클러스터 모드로 실행할지 여부를 결정
+- cluster-config-file < filename> : 해당 노드의 클러스터를 유지하기 위한 설정을 저장하는 파일로, 사용자가 수정하지 않음
+- cluster-node-timeout < milliseconds>
+  - 특정 노드가 정상이 아닌 것으로 판단하는 기준 시간
+  - 이 시간동안 감지되지 않는 master는 replica에 의해 failover가 이루어짐.
+- cluster-replica-validity-factor < factor>
+  - master와 통신한지 오래된 replica가 failover를 수행하지 않게 하기 위한 설정
+  - (cluster-node-timeout * factor) 만큼 master와 통신이 없었던 replica는 failover 대상에서 제외된다
+- cluster-migration-barrier < count> : 
+  - 한 master가 유지해야 하는 최소 replica의 개수
+  - 이 개수를 충족하는 선에서 일부 replica는 replica를 가지지 않은 master의 replica로 migrate 될 수 있다.
+- cluster-require-full-coverage < yes/no> :
+  - 일부 hash slot이 커버되지 않을 때 write 요청을 받지 않을까 여부
+  - no로 설정하게 되면 일부 노드에 장애가 생겨 해당 hash slot이 정상 작동하지 않더라도 나머지 hash slot에 대해서는 작동하도록 할 수 있다
+- cluster-allow-reads-when-down < yes/no> :
+  - 클러스가 정상 상태가 아닐 때도 read 요청은 받도록 할지 여부
+  - 어플리케이션에서 read 동작의 consistency가 중요치 않은 경우에 yes로 설정할 수 있다
+
+
+레디스 conf 파일의 포트를 변경 후 cluster 모드를 키고 실행한다
+
+<img width="743" alt="image" src="https://user-images.githubusercontent.com/40031858/224523582-8a5cf127-bf5d-4cef-9a17-94fbea13342a.png">
+
+총 6개의 레디스를 띄웠으며 (7000~ 7005)
+
+```bash
+redis-cli --cluster create localhost:7000 localhost:7001 localhost:7002 localhost:7003 localhost:7004 localhost:7005 --cluster-replicas 1
+```
+
+<img width="691" alt="image" src="https://user-images.githubusercontent.com/40031858/224523659-3cf3ac72-9fc9-4586-8651-d94cbf6123fc.png">
+
+<img width="933" alt="image" src="https://user-images.githubusercontent.com/40031858/224523696-5f9d8348-600c-40e8-81cc-e4e66c2de1fc.png">
+
+
+
+값에 대한 수정은 replica에서 할 수 없고 replica에서는 readonly 명령어를 통해 값을 읽기만 가능하도록 설정할 수 있다.
+
+<img width="1713" alt="image" src="https://user-images.githubusercontent.com/40031858/224523803-e55e5dc5-e1ae-4777-8b1a-15ecdada51f8.png">
+
+7001번 레디스를 종료할 경우 failover가 일어난다.
+
+<img width="1682" alt="image" src="https://user-images.githubusercontent.com/40031858/224523846-0c2e2923-dd6f-4b88-bddb-ee839c3612cd.png">
+
+새로운 레디스를 띄운 후 클러스터에 추가하려면 다음과 같이 하면된다
+
+```bash
+redis-cli --cluster add-node localhost:7006 localhost:7001
+```
+
+<img width="783" alt="image" src="https://user-images.githubusercontent.com/40031858/224524280-6343615c-f8bd-44d9-a571-b22b2028d736.png">
+
+add node를 할경우 master로 추가되는데 slave로 추가하고 싶다면 다음과 같이 할 수 있다
+
+```bash
+redis-cli --cluster add-node localhost:7007 localhost:7006 --cluster-slave
+```
+
+<img width="921" alt="image" src="https://user-images.githubusercontent.com/40031858/224524376-18190537-b00c-4d1f-81b9-b21c9967ec02.png">
